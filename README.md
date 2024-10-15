@@ -1,6 +1,6 @@
 # random-RabbitMQ-app
 
-This is a FastAPI application that integrates with RabbitMQ for message passing. The application showcases an example of asynchronous communication using aio-pika.
+This is a `FastAPI` application that integrates with `RabbitMQ` for message passing. The application showcases an example of asynchronous communication using `aio-pika`.
 ## Features
 
 - **FastAPI Backend**
