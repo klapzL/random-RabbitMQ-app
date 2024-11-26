@@ -1,22 +1,19 @@
-import os
-
 import aio_pika
 from fastapi import BackgroundTasks, FastAPI
 
-app = FastAPI()
+from src.config.rmq import get_connection, settings
 
-RABBITMQ_HOST = os.getenv("RABBITMQ_HOST", "amqp://guest:guest@rabbitmq/")
-QUEUE_NAME = "message_queue"
+app = FastAPI()
 
 
 async def send_message_to_rabbitmq(message: str):
-    connection = await aio_pika.connect_robust(RABBITMQ_HOST)
+    connection = await get_connection()
     async with connection:
         channel = await connection.channel()
 
         await channel.default_exchange.publish(
             aio_pika.Message(body=message.encode()),
-            routing_key=QUEUE_NAME,
+            routing_key=settings.RMQ_QUEUE,
         )
         print(f"Sent message: {message}")
 

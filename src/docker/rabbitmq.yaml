@@ -1,7 +1,9 @@
 services:
   rabbitmq:
-    container_name: rabbit-mq
+    container_name: ${RABBITMQ_HOST_NAME}
     image: rabbitmq:management-alpine
+    env_file:
+      - ../.env
     ports:
       - "5672:5672"
       - "15672:15672"
@@ -10,3 +12,8 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    networks:
+    - shared_network
+
+networks:
+  shared_network:

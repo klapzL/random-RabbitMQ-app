@@ -1,19 +1,11 @@
 services:
-  rabbitmq:
-    container_name: rabbit-mq
-    image: rabbitmq:management-alpine
-    ports:
-      - "5672:5672"
-      - "15672:15672"
-    healthcheck:
-      test: [ "CMD", "rabbitmqctl", "status" ]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
-  producer:
-    build: ./producer
-    container_name: producer
+  auth:
+    build:
+      context: ../../
+      dockerfile: src/docker/dfiles/producer
+    container_name: auth
+    env_file:
+      - ../.env
     environment:
       - RABBITMQ_HOST=amqp://guest:guest@rabbitmq/
     depends_on:
@@ -23,13 +15,17 @@ services:
       - "8000:8000"
     volumes:
       - ./producer:/app
+    networks:
+      - shared_network
 
-  consumer:
-    build: ./consumer
-    container_name: consumer
+  email:
+    build:
+      context: ../../
+      dockerfile: src/docker/dfiles/consumer
+    container_name: email
+    env_file:
+      - ../.env
     restart: always
-    environment:
-      - RABBITMQ_HOST=amqp://guest:guest@rabbitmq/
     depends_on:
       rabbitmq:
         condition: service_healthy
@@ -37,3 +33,8 @@ services:
       - "8001:8001"
     volumes:
       - ./consumer:/app
+    networks:
+      - shared_network
+
+networks:
+  shared_network:

@@ -1,49 +1,46 @@
 import asyncio
 import logging
-import os
 
-import aio_pika
+from aio_pika import IncomingMessage
 from fastapi import FastAPI
+
+from src.config import get_connection, settings
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# RabbitMQ configuration
-RABBITMQ_HOST = os.getenv("RABBITMQ_HOST", "amqp://guest:guest@rabbitmq/")
-QUEUE_NAME = "message_queue"
-
 
 async def consume_message():
-    connection = await aio_pika.connect_robust(RABBITMQ_HOST)
-    async with connection:
+    async with await get_connection() as connection:
         channel = await connection.channel()
+        channel.set_qos(prefetch_count=1)
+        queue = await channel.declare_queue(settings.RMQ_QUEUE)
 
-        queue = await channel.declare_queue(QUEUE_NAME)
+        logger.info("Queue declared: %s", settings.RMQ_QUEUE)
 
-        logger.info("Queue declared: %s", QUEUE_NAME)
-
-        logger.info("Waiting for messages...")
-
-        async def callback(message: aio_pika.IncomingMessage):
+        async def callback(message: IncomingMessage):
             async with message.process():
                 logger.info("Received message: %s", message.body.decode())
 
         await queue.consume(callback)
 
+        logger.info("Waiting for messages...")
+
         try:
             await asyncio.Future()
         except asyncio.CancelledError:
-            logger.info("Consumer task cancelled.")
+            logger.info("Consumer cancelled.")
 
 
 async def lifespan(app: FastAPI):
-    consumer = asyncio.create_task(consume_message())
-    logger.info("Consumer task started.")
+    consumer = asyncio.run_coroutine_threadsafe(
+        consume_message(), asyncio.get_running_loop()
+    )
+    logger.info("Consumer started.")
 
     yield
 
     consumer.cancel()
-    await consumer
 
 
 app = FastAPI(lifespan=lifespan)
